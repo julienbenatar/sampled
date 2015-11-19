@@ -20,10 +20,6 @@
 			  stroke: #000;
 			  shape-rendering: crispEdges;
 			}
-
-			.x.axis path {
-			  display: none;
-			}
 		</style>
 	</head>
 	<body>
@@ -33,9 +29,9 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
 		<script>
 		d3.selection.prototype.moveToFront = function() {
-		  return this.each(function(){
-		  this.parentNode.appendChild(this);
-		  });
+			return this.each(function(){
+				this.parentNode.appendChild(this);
+		  	});
 		};
 
 		var n = 100, // number of layers
@@ -86,32 +82,39 @@
 			.attr("width", width)
 			.attr("height", height);
 
-		svg.selectAll("path")
+		var g = svg.selectAll("g")
 			.data(layers0)
-		  .enter().append("path")
-			.attr("d", area)
-			.on("mouseover", function(object, id) {
-				d3.select(this)
-					.transition()
-						.duration(500)
-					.style('fill', function() { return '#ccc'; });
-			})
-			.on("mouseout", function(obj, id) {
-				d3.select(this)
-					.transition()
-							.duration(500)
-					.style('fill', function() { return color(Math.random()); });
-			})
-			.on("click", function(object, id) {
-				highlightLayer(this, id);
-			})
-			.style("fill", function() { return color(Math.random()); });
+		  .enter().append("g");
+
+		var path = g.append("path");
+
+		drawPaths();
 
 		$(document).keyup(function(e) {
 			if (e.keyCode == 27) {
 				reset();
 			}
 		});
+
+		function drawPaths() {
+			path.attr("d", area)
+				.on("mouseover", function(object, id) {
+					d3.select(this)
+						.transition()
+							.duration(500)
+						.style('fill', function() { return '#ccc'; });
+				})
+				.on("mouseout", function(obj, id) {
+					d3.select(this)
+						.transition()
+								.duration(500)
+						.style('fill', function() { return color(Math.random()); });
+				})
+				.on("click", function(object, id) {
+					highlightLayer(this, id);
+				})
+				.style("fill", function() { return color(Math.random()); });
+		}
 
 		function reset() {
 			svg.select(".graphContainer").remove();
@@ -122,75 +125,68 @@
 			path.transition()
 					.duration(2000)
 				.attr("d", area)
-				.each("end", function() {
-					path.on("mouseout", function(obj, id) {
-						d3.select(this)
-							.transition()
-								.duration(500)
-							.style('fill', function() { return color(Math.random()); });
-					})
-					.on("mouseover", function(object, id) {
-						d3.select(this)
-							.transition()
-								.duration(500)
-							.style('fill', function() { return '#ccc'; });
-					});
-				});
+				.each("end", drawPaths);
 		}
 
 		function highlightLayer(object, index) {
 			d3.selectAll('path')
 				.on('mouseover', null)
-				.on('mouseout', null);
+				.on('mouseout', null)
+				.on('click', null);
 
 			y1.domain([0, d3.max(layers0[index], function(layer) { return layer.y; })]);
 
-			d3.select(object)
-					.moveToFront()
-					.data(layers2)
-				.transition()
-					.duration(1500)
-				.attr("d", area)
-				.each('end', function() {
-					var graphContainer = svg.append("g")
-						.attr("transform", "translate(50,50)")
-						.attr("class", "graphContainer");
+			var selected = d3.select(object);
 
-					graphContainer.append("g")
-				      .attr("class", "x axis")
-				      .attr("transform", "translate(0," + height / 2 + ")")
-				      .call(xAxis);
+			var parent = selected.node().parentNode;
 
-					graphContainer.append("g")
-					    .attr("class", "y axis")
-					    .call(yAxis)
-						.append("text")
-			      			.attr("transform", "rotate(-90)")
-			      			.attr("y", 6)
-			      			.attr("dy", ".71em")
-			      			.style("text-anchor", "end")
-			      			.text("Value");
+			d3.select(parent).moveToFront();
 
-				    var graphLine = graphContainer.append("path")
-			      		.datum(layers0[index])
-			      		.attr("class", "line")
-			      		.attr("d", line)
-			      		.style({
-			      			fill: 'none',
-			      			stroke: 'steelblue',
-			      			'stroke-width': '3px'
-			      		});
+			selected
+				.data(layers2)
+			.transition()
+				.duration(1500)
+			.attr("d", area)
+			.each('end', function() {
+				var graphContainer = svg.append("g")
+					.attr("transform", "translate(50,50)")
+					.attr("class", "graphContainer");
 
-			      	var totalLength = graphLine[0][0].getTotalLength();
+				graphContainer.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + height / 2 + ")")
+			      .call(xAxis);
 
-			      	d3.select(graphLine[0][0])
-				    	.attr("stroke-dasharray", totalLength + " " + totalLength)
-				    	.attr("stroke-dashoffset", totalLength)
-				    	.transition()
-				    		.duration(5000)
-				        .ease("linear")
-				        .attr("stroke-dashoffset", 0);
-				});
+				graphContainer.append("g")
+				    .attr("class", "y axis")
+				    .call(yAxis)
+					.append("text")
+		      			.attr("transform", "rotate(-90)")
+		      			.attr("y", 6)
+		      			.attr("dy", ".71em")
+		      			.style("text-anchor", "end")
+		      			.text("Value");
+
+			    var graphLine = graphContainer.append("path")
+		      		.datum(layers0[index])
+		      		.attr("class", "line")
+		      		.attr("d", line)
+		      		.style({
+		      			fill: 'none',
+		      			stroke: 'steelblue',
+		      			'stroke-width': '3px'
+		      		});
+
+		      	var totalLength = graphLine[0][0].getTotalLength();
+
+		      	d3.select(graphLine[0][0])
+			    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+			    	.attr("stroke-dashoffset", totalLength)
+			    	.transition()
+			    		.duration(5000)
+			        .ease("linear")
+			        .attr("stroke-dashoffset", 0);
+			});
 		}
 
 		// Inspired by Lee Byron's test data generator.
