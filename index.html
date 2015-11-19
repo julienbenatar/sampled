@@ -20,25 +20,29 @@
 		<div class="content">
 		</div>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.9/d3.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
 		<script>
-		var n = 5, // number of layers
+		d3.selection.prototype.moveToFront = function() {
+		  return this.each(function(){
+		  this.parentNode.appendChild(this);
+		  });
+		};
+
+		var n = 100, // number of layers
 			m = 30, // number of samples per layer
 			stack = d3.layout.stack().offset("wiggle"),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
-			layers1 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
-			layers2 = stack(d3.range(1).map(function() { return reset(m); }));
-
-		console.log(layers2);
+			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
 
 		var width = window.screen.width,
-			height = 600;
+			height = 800;
 
 		var x = d3.scale.linear()
 			.domain([0, m - 1])
 			.range([0, width]);
 
 		var y = d3.scale.linear()
-			.domain([0, d3.max(layers0.concat(layers1), function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
+			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
 			.range([height, 0]);
 
 		var color = d3.scale.linear()
@@ -58,19 +62,42 @@
 		  .enter().append("path")
 			.attr("d", area)
 			.on("mouseover", function(object, id) {
-				console.log('hovering ', id);
+				d3.select(this)
+					.transition()
+						.duration(500)
+					.style('fill', function() { return '#ccc'; });
+			})
+			.on("mouseout", function(obj, id) {
+				d3.select(this)
+					.transition()
+							.duration(500)
+					.style('fill', function() { return color(Math.random()); });
 			})
 			.on("click", function(object, id) {
-				highlightLayer(object, id);
+				highlightLayer(this);
 			})
 			.style("fill", function() { return color(Math.random()); });
 
+		$(document).keyup(function(e) {
+			if (e.keyCode == 27) {
+				reset();
+			}
+		});
 
-		function highlightLayer(object, id) {
-			d3.selectAll("path")
+		function reset() {
+			svg.selectAll("path")
+				.data(layers0)
+				.transition()
+					.duration(2500)
+				.attr("d", area);
+		}
+
+		function highlightLayer(object) {
+			d3.select(object)
+					.moveToFront()
 					.data(layers2)
 				.transition()
-				.duration(2500)
+					.duration(2000)
 				.attr("d", area);
 		}
 
@@ -93,7 +120,7 @@
 		  return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
 		}
 
-		function reset(n) {
+		function expand(n) {
 		  var a = [], i;
 		  for (i = 0; i < n; ++i) a[i] = 0;
 		  return a.map(function(d, i) { return {x: i, y: 600}; });
