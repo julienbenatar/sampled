@@ -44,8 +44,8 @@
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
 			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
 
-		var width = window.screen.width,
-			height = window.screen.height;
+		var width = window.innerWidth,
+			height = window.innerHeight;
 
 		var x = d3.scale.linear()
 			.domain([0, m - 1])
@@ -63,7 +63,6 @@
 			.range([0, width / 2]);
 
 		var y1 = d3.scale.linear()
-			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
 			.range([height / 2, 0]);
 
 		var area = d3.svg.area()
@@ -117,50 +116,81 @@
 		function reset() {
 			svg.select(".graphContainer").remove();
 
-			svg.selectAll("path")
-				.data(layers0)
-				.transition()
-					.duration(2500)
-				.attr("d", area);
+			var path = svg.selectAll("path")
+				.data(layers0);
+
+			path.transition()
+					.duration(2000)
+				.attr("d", area)
+				.each("end", function() {
+					path.on("mouseout", function(obj, id) {
+						d3.select(this)
+							.transition()
+								.duration(500)
+							.style('fill', function() { return color(Math.random()); });
+					})
+					.on("mouseover", function(object, id) {
+						d3.select(this)
+							.transition()
+								.duration(500)
+							.style('fill', function() { return '#ccc'; });
+					});
+				});
 		}
 
 		function highlightLayer(object, index) {
+			d3.selectAll('path')
+				.on('mouseover', null)
+				.on('mouseout', null);
+
+			y1.domain([0, d3.max(layers0[index], function(layer) { return layer.y; })]);
+
 			d3.select(object)
 					.moveToFront()
 					.data(layers2)
-					.on('mouseout', null)
 				.transition()
-					.duration(2000)
-				.attr("d", area);
+					.duration(1500)
+				.attr("d", area)
+				.each('end', function() {
+					var graphContainer = svg.append("g")
+						.attr("transform", "translate(50,50)")
+						.attr("class", "graphContainer");
 
-			var graphContainer = svg.append("g")
-				.attr("transform", "translate(50,50)")
-				.attr("class", "graphContainer");
+					graphContainer.append("g")
+				      .attr("class", "x axis")
+				      .attr("transform", "translate(0," + height / 2 + ")")
+				      .call(xAxis);
 
-			graphContainer.append("g")
-		      .attr("class", "x axis")
-		      .attr("transform", "translate(0," + height / 2 + ")")
-		      .call(xAxis);
+					graphContainer.append("g")
+					    .attr("class", "y axis")
+					    .call(yAxis)
+						.append("text")
+			      			.attr("transform", "rotate(-90)")
+			      			.attr("y", 6)
+			      			.attr("dy", ".71em")
+			      			.style("text-anchor", "end")
+			      			.text("Value");
 
-			graphContainer.append("g")
-			    .attr("class", "y axis")
-			    .call(yAxis)
-				.append("text")
-	      			.attr("transform", "rotate(-90)")
-	      			.attr("y", 6)
-	      			.attr("dy", ".71em")
-	      			.style("text-anchor", "end")
-	      			.text("Value");
+				    var graphLine = graphContainer.append("path")
+			      		.datum(layers0[index])
+			      		.attr("class", "line")
+			      		.attr("d", line)
+			      		.style({
+			      			fill: 'none',
+			      			stroke: 'steelblue',
+			      			'stroke-width': '3px'
+			      		});
 
-		    graphContainer.append("path")
-	      		.datum(layers0[index])
-	      		.attr("class", "line")
-	      		.attr("d", line)
-	      		.style({
-	      			fill: 'none',
-	      			stroke: 'steelblue',
-	      			'stroke-width': '1.5px'
-	      		});
+			      	var totalLength = graphLine[0][0].getTotalLength();
+
+			      	d3.select(graphLine[0][0])
+				    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+				    	.attr("stroke-dashoffset", totalLength)
+				    	.transition()
+				    		.duration(5000)
+				        .ease("linear")
+				        .attr("stroke-dashoffset", 0);
+				});
 		}
 
 		// Inspired by Lee Byron's test data generator.
