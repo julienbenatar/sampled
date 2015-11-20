@@ -34,6 +34,10 @@
 				left: 25px;
 			}
 
+			path {
+				transition: opacity .2s ease;
+			}
+
 			input.toggleButton {
 				-webkit-box-sizing: border-box;
 			    -moz-box-sizing: border-box;
@@ -208,7 +212,7 @@
 		drawPaths();
 
 		function drawBars() {
-			svg.selectAll("path").remove();
+			svg.selectAll("path").attr('style', 'opacity: 0');
 		}
 
 		function drawText(index) {
@@ -222,6 +226,7 @@
 
 		function drawPaths() {
 			$('.metadata').hide();
+			svg.selectAll("path").attr('style', 'opacity: 1');
 
 			path.attr("d", function(d) {
 					return area(d.data);
@@ -374,6 +379,20 @@
 	  		};
 		}
 
+		/************************
+		* D3 Handle Toggle
+		************************/
+
+		var checkbox = d3.select('input[type="checkbox"]');
+		checkbox.on('change', function() {
+			var isChecked = this.checked;
+			if (isChecked === true) {
+				drawBars();
+			}
+			else {
+				drawPaths();
+			}
+		});
 
 		/************************
 		* ESCAPE KEY
