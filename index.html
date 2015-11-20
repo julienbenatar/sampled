@@ -10,6 +10,7 @@
 				font-family: 'Open Sans', sans-serif;
 				margin: 0;
 				width: 100%;
+				background-color: #A5DF00;
 			}
 			.content {
 				width: 100%;
@@ -51,8 +52,7 @@
 			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
 			.range([height, 0]);
 
-		var color = d3.scale.linear()
-			.range(["#aad", "#556"]);
+		var color = d3.scale.category20b();
 
 		var x1 = d3.scale.linear()
 			.domain([0, m - 1])
@@ -105,19 +105,23 @@
 				.on("click", function(object, id) {
 					highlightLayer(this, id);
 				})
-				.style("fill", function() { return color(Math.random()); })
+				.style("fill", function(d, i) {
+					return color(i);
+				})
 				.style('opacity', 1)
 				.on("mouseover", function(object, id) {
 					d3.select(this)
 						.transition()
 							.duration(500)
-						.style('fill', function() { return '#ccc'; });
+						.style('fill', function() { return '#240B3B'; });
 				})
 				.on("mouseout", function(obj, id) {
 					d3.select(this)
 						.transition()
-								.duration(500)
-						.style('fill', function() { return color(Math.random()); });
+							.duration(500)
+						.style('fill', function(d, i) {
+							return color(id);
+						});
 				});
 		}
 
@@ -184,8 +188,8 @@
 		      		.attr("d", line)
 		      		.style({
 		      			fill: 'none',
-		      			stroke: 'steelblue',
-		      			'stroke-width': '3px'
+		      			stroke: '#0080FF',
+		      			'stroke-width': '5px'
 		      		});
 
 		      	var totalLength = graphLine[0][0].getTotalLength();
