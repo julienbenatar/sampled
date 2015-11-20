@@ -123,11 +123,12 @@
 
 		function reset() {
 			svg.select(".graphContainer").remove();
+			svg.select(".exit").remove();
 
 			path.data(layers0);
 
 			path.transition()
-					.duration(2000)
+					.duration(1500)
 				.attr("d", area)
 				.each("end", drawPaths);
 		}
@@ -152,6 +153,12 @@
 			.attr("d", area)
 			.style('opacity', .9)
 			.each('end', function() {
+				svg.append('path')
+					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
+					.attr('transform', 'translate(' + (width - 25) + ',25) rotate(45)')
+					.on('click', reset)
+					.attr('class', 'exit');
+
 				var graphContainer = svg.append("g")
 					.attr("transform", "translate(50,50)")
 					.attr("class", "graphContainer");
