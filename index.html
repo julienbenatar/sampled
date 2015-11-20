@@ -16,10 +16,15 @@
 				width: 100%;
 			}
 			.axis path,
-			.axis line {
+			.axis line,
+			.axis text {
 			  fill: none;
-			  stroke: #000;
+			  stroke: #ccc;
 			  shape-rendering: crispEdges;
+			}
+
+			.exit:hover {
+				cursor: pointer;
 			}
 		</style>
 	</head>
@@ -36,7 +41,7 @@
 		};
 
 		var n = 20, // number of layers
-			m = 30, // number of samples per layer
+			m = 90, // number of samples per layer
 			stack = d3.layout.stack().offset("wiggle"),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
 			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
@@ -159,9 +164,10 @@
 			.each('end', function() {
 				svg.append('path')
 					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
-					.attr('transform', 'translate(' + (width - 25) + ',25) rotate(45)')
+					.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
 					.on('click', reset)
-					.attr('class', 'exit');
+					.attr('class', 'exit')
+					.style('fill', function(d, i) { return color(index); });
 
 				var graphContainer = svg.append("g")
 					.attr("transform", "translate(50,50)")
@@ -188,9 +194,9 @@
 		      		.attr("d", line)
 		      		.style({
 		      			fill: 'none',
-		      			stroke: '#0080FF',
 		      			'stroke-width': '5px'
-		      		});
+		      		})
+		      		.style('stroke', function(d, i) { return color(index); });
 
 		      	var totalLength = graphLine[0][0].getTotalLength();
 
