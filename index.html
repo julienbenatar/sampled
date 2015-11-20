@@ -18,12 +18,15 @@
 				width: 100%;
 			}
 			.axis path,
-			.axis line {
+			.axis line,
+			.axis text {
 			  fill: none;
-			  stroke: #000;
+			  stroke: #ccc;
 			  shape-rendering: crispEdges;
 			}
-
+			.exit:hover {
+				cursor: pointer;
+			}
 			.buttonContainer {
 				display: block;
 				position: absolute;
@@ -87,6 +90,23 @@
 				background-color: #CCC;
 			}
 
+			.metadata {
+				color: #ccc;
+				position: absolute;
+				right: 0;
+				top: 50px;
+				padding: 20px;
+				font-size: 18px;
+			}
+
+			.artistName {
+				font-size: 40px;
+				font-weight: bold;
+			}
+
+			.bold {
+				font-weight: bold;
+			}
 		</style>
 	</head>
 	<body>
@@ -95,9 +115,17 @@
 				<input class='toggleButton' id='cb1' type='checkbox'>
 		    	<label class='toggleButton' for='cb1'></label>
 		    </div>
+
+		    <div class="metadata">
+		    	<div class="artistName"></div>
+		    	<div class="genre">
+		    		<span class="bold">Genre: </span><span id="genre"></span>
+		    	</div>
+		    </div>
 		</div>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.9/d3.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.10.1/lodash.min.js"></script>
 		<script>
 
 
@@ -112,8 +140,12 @@
 		};
 
 		var n = 20, // number of layers
-			m = 30, // number of samples per layer
-			stack = d3.layout.stack().offset("wiggle"),
+			m = 90, // number of samples per layer
+			stack = d3.layout.stack()
+				.offset("wiggle")
+				.values(function(d) {
+					return d.data;
+				}),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
 			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
 
@@ -125,7 +157,11 @@
 			.range([0, width]);
 
 		var y = d3.scale.linear()
-			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
+			.domain([0, d3.max(layers0, function(layer) {
+				return d3.max(layer.data, function(d) {
+					return d.y0 + d.y;
+				});
+			})])
 			.range([height, 0]);
 
 		var color = d3.scale.category20b();
@@ -151,8 +187,12 @@
 		    .orient("left");
 
 		var line = d3.svg.line()
-		    .x(function(d) { return x1(d.x); })
-		    .y(function(d) { return y1(d.y); });
+		    .x(function(d) {
+		    	return x1(d.x);
+		    })
+		    .y(function(d) {
+		    	return y1(d.y);
+		    });
 
 
 		/************************
@@ -175,11 +215,22 @@
 			svg.selectAll("path").attr('style', 'opacity: 0');
 		}
 
-		function drawPaths() {
+		function drawText(index) {
+			var metadata = layers0[index].metadata;
 
+			$(".artistName").text(metadata.artist);
+			$("#genre").text(metadata.genre);
+
+			$(".metadata").show('slow');
+		}
+
+		function drawPaths() {
+			$('.metadata').hide();
 			svg.selectAll("path").attr('style', 'opacity: 1');
 
-			path.attr("d", area)
+			path.attr("d", function(d) {
+					return area(d.data);
+				})
 				.on("click", function(object, id) {
 					highlightLayer(this, id);
 				})
@@ -211,8 +262,58 @@
 
 			path.transition()
 					.duration(1500)
-				.attr("d", area)
+				.attr("d", function(d) { return area(d.data) })
 				.each("end", drawPaths);
+		}
+
+		function drawLineGraph(index) {
+			svg.append('path')
+				.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
+				.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
+				.on('click', reset)
+				.attr('class', 'exit')
+				.style('fill', function(d, i) { return color(index); });
+
+			var graphContainer = svg.append("g")
+				.attr("transform", "translate(50,100)")
+				.attr("class", "graphContainer");
+
+			graphContainer.append("g")
+		      .attr("class", "x axis")
+		      .attr("transform", "translate(0," + height / 2 + ")")
+		      .call(xAxis);
+
+			graphContainer.append("g")
+			    .attr("class", "y axis")
+			    .call(yAxis)
+				.append("text")
+	      			.attr("transform", "rotate(-90)")
+	      			.attr("y", 6)
+	      			.attr("dy", ".71em")
+	      			.style("text-anchor", "end")
+	      			.text("Spins");
+
+		    var graphLine = graphContainer.append("path")
+	      		.datum(layers0[index])
+	      		.attr("class", "line")
+	      		.attr("d", function(d) {
+	      			return line(d.data);
+	      		})
+	      		.style({
+	      			fill: 'none',
+	      			'stroke-width': '5px'
+	      		})
+	      		.style('stroke', function(d, i) { return color(index); });
+
+	      	var totalLength = graphLine.node().getTotalLength();
+
+	      	d3.select(graphLine.node())
+		    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+		    	.attr("stroke-dashoffset", totalLength)
+		    	.transition()
+		    		.duration(5000)
+		        .ease("linear")
+		        .attr("stroke-dashoffset", 0);
 		}
 
 		function highlightLayer(object, index) {
@@ -221,7 +322,10 @@
 				.on('mouseout', null)
 				.on('click', null);
 
-			y1.domain([0, d3.max(layers0[index], function(layer) { return layer.y; })]);
+			y1.domain([0, d3.max(layers0[index].data, function(layer) {
+					return layer.y;
+				})
+			]);
 
 			var selected = d3.select(object);
 			var parent = selected.node().parentNode;
@@ -232,53 +336,11 @@
 				.data(layers2)
 			.transition()
 				.duration(1500)
-			.attr("d", area)
+			.attr("d", function(d) { return area(d.data); })
 			.style('opacity', .9)
 			.each('end', function() {
-				svg.append('path')
-					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
-					.attr('transform', 'translate(' + (width - 25) + ',25) rotate(45)')
-					.on('click', reset)
-					.attr('class', 'exit');
-
-				var graphContainer = svg.append("g")
-					.attr("transform", "translate(50,50)")
-					.attr("class", "graphContainer");
-
-				graphContainer.append("g")
-			      .attr("class", "x axis")
-			      .attr("transform", "translate(0," + height / 2 + ")")
-			      .call(xAxis);
-
-				graphContainer.append("g")
-				    .attr("class", "y axis")
-				    .call(yAxis)
-					.append("text")
-		      			.attr("transform", "rotate(-90)")
-		      			.attr("y", 6)
-		      			.attr("dy", ".71em")
-		      			.style("text-anchor", "end")
-		      			.text("Value");
-
-			    var graphLine = graphContainer.append("path")
-		      		.datum(layers0[index])
-		      		.attr("class", "line")
-		      		.attr("d", line)
-		      		.style({
-		      			fill: 'none',
-		      			stroke: '#0080FF',
-		      			'stroke-width': '5px'
-		      		});
-
-		      	var totalLength = graphLine[0][0].getTotalLength();
-
-		      	d3.select(graphLine[0][0])
-			    	.attr("stroke-dasharray", totalLength + " " + totalLength)
-			    	.attr("stroke-dashoffset", totalLength)
-			    	.transition()
-			    		.duration(5000)
-			        .ease("linear")
-			        .attr("stroke-dashoffset", 0);
+				drawLineGraph(index);
+				drawText(index);
 			});
 		}
 
@@ -298,13 +360,23 @@
 			var a = [], i;
 			for (i = 0; i < n; ++i) a[i] = 0;
 			for (i = 0; i < 5; ++i) bump(a);
-			return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
+			var data = a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
+			return {
+				data: data,
+				metadata: {
+					artist: "James Brown",
+					genre: "Soul"
+				}
+			};
 		}
 
 		function expand(n) {
 	  		var a = [], i;
 	  		for (i = 0; i < n; ++i) a[i] = 0;
-	  		return a.map(function(d, i) { return {x: i, y: 600}; });
+	  		var data = a.map(function(d, i) { return {x: i, y: 600}; });
+	  		return {
+	  			data: data
+	  		};
 		}
 
 		/************************
