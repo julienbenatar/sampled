@@ -24,7 +24,8 @@
 			  stroke: #ccc;
 			  shape-rendering: crispEdges;
 			}
-			.exit:hover {
+			.exit:hover,
+			.triangle:hover {
 				cursor: pointer;
 			}
 			.buttonContainer {
@@ -32,6 +33,16 @@
 				position: absolute;
 				top: 25px;
 				left: 25px;
+			}
+			.artistSelect {
+				display: block;
+				position: absolute;
+				top: 20px;
+				right: 25px;
+				background-color: white;
+			}
+			.artistSelect option {
+				padding: 10px;
 			}
 
 			path {
@@ -97,6 +108,7 @@
 				top: 50px;
 				padding: 20px;
 				font-size: 18px;
+				width: 40%;
 			}
 
 			.artistName {
@@ -108,32 +120,26 @@
 				font-weight: bold;
 			}
 
-			.intro {
+			.description {
 				text-align: center;
+				padding: 50px;
+				font-family: Georgia;
+				line-height: 2;
 			}
 
 			.header {
 				font-size: 40px;
 				font-weight: bold;
 			}
+
+			.copy {
+				font-size: 20px;
+			}
 		</style>
 	</head>
 	<body>
 		<div class="content">
-			<div class="intro">
-				<div class="header">Who is a better influence, Kanye or Jay-Z?</div>
 
-				<div>Maybe you were always a fan of Etta James.</div>
-
-				<div>Maybe you love electronic and first fell in love with her thanks to the earworm hook from “Something’s Got a Hold on Me” that Pretty Lights sampled in the 2006 track “Finally Moving”?</div>
-
-				<div>Or maybe you’re more of a hip hop fan and didn’t hear that hook until Flo Rida used it five years later for “Good Feeling”?</div>
-
-				<div>Or maybe you still have no idea what I’m on about. </div>
-
-				<div>But one thing is for sure - The art of sampling, remixing, and covering - essentially relying on original recordings from yonder to enhance your music has become standard procedure. Which raises the question - what is the impact for the original artists that are sampled? Do they see an increase or resurgence in popularity, and how can we measure that? </div>
-
-			</div>
 			<div class="buttonContainer">
 				<input class='toggleButton' id='cb1' type='checkbox'>
 		    	<label class='toggleButton' for='cb1'></label>
@@ -143,6 +149,9 @@
 		    	<div class="artistName"></div>
 		    	<div class="genre">
 		    		<span class="bold">Genre: </span><span id="genre"></span>
+		    	</div>
+		    	<div>
+		    		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
 		    	</div>
 		    </div>
 		</div>
@@ -155,297 +164,365 @@
 		/************************
 		* D3 SETUP
 		************************/
-
 		d3.selection.prototype.moveToFront = function() {
 			return this.each(function(){
 				this.parentNode.appendChild(this);
 		  	});
 		};
 
-		var n = 20, // number of layers
-			m = 90, // number of samples per layer
-			stack = d3.layout.stack()
+		d3.json('stream_data1.json', function(error, json) {
+			_.forIn(json, function(val, key) {
+				_.each(val, function(d) {
+					var newData = [];
+					_.each(d.data, function(value, i) {
+						newData.push({
+							x: i,
+							y: value
+						})
+					});
+					d.data = newData;
+				});
+			});
+			visualize(json);
+		});
+
+		function visualize(data) {
+			var filteredData = _.filter(data['James Brown'], function(d) {
+				return d.data.length == 91;
+			});
+
+			var currentArtist = _.sortByOrder(filteredData, function(d) {
+				return d3.max(d.data, function(e) {
+					return e.y;
+				});
+			}, 'asc');
+
+			_.each(currentArtist, function(d) {
+				console.log(d3.max(d.data, function(e) {
+					return e.y;
+				}));
+			});
+
+			console.log(currentArtist);
+
+			var m = 89;
+			var stack = d3.layout.stack()
 				.offset("wiggle")
 				.values(function(d) {
 					return d.data;
-				}),
-			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
-			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
-
-		var width = window.innerWidth,
-			height = window.innerHeight;
-
-		var x = d3.scale.linear()
-			.domain([0, m - 1])
-			.range([0, width]);
-
-		var y = d3.scale.linear()
-			.domain([0, d3.max(layers0, function(layer) {
-				return d3.max(layer.data, function(d) {
-					return d.y0 + d.y;
 				});
-			})])
-			.range([height, 0]);
 
-		var color = d3.scale.category20b();
+			var layers0 = stack(currentArtist);
+			var layers2 = stack(d3.range(1).map(function() { return expand(m); }));
+			var artists = _.keys(data);
 
-		var x1 = d3.scale.linear()
-			.domain([0, m - 1])
-			.range([0, width / 2]);
+			var width = window.innerWidth,
+				height = window.innerHeight;
 
-		var y1 = d3.scale.linear()
-			.range([height / 2, 0]);
+			var x = d3.scale.linear()
+				.domain([0, m - 1])
+				.range([0, width]);
 
-		var area = d3.svg.area()
-			.x(function(d) { return x(d.x); })
-			.y0(function(d) { return y(d.y0); })
-			.y1(function(d) { return y(d.y0 + d.y); });
+			var y = d3.scale.linear()
+				.domain([0, d3.max(layers0, function(layer) {
+					return d3.max(layer.data, function(d) {
+						return d.y0 + d.y;
+					});
+				})])
+				.range([height, 0]);
 
-		var xAxis = d3.svg.axis()
-    		.scale(x1)
-    		.orient("bottom");
+			var color = d3.scale.category20b();
 
-		var yAxis = d3.svg.axis()
-		    .scale(y1)
-		    .orient("left");
+			var x1 = d3.scale.linear()
+				.domain([0, m - 1])
+				.range([0, width / 2]);
 
-		var line = d3.svg.line()
-		    .x(function(d) {
-		    	return x1(d.x);
-		    })
-		    .y(function(d) {
-		    	return y1(d.y);
-		    });
+			var y1 = d3.scale.linear()
+				.range([height / 2, 0]);
 
+			var area = d3.svg.area()
+				.x(function(d) { return x(d.x); })
+				.y0(function(d) { return y(d.y0); })
+				.y1(function(d) { return y(d.y0 + d.y); });
 
-		/************************
-		* D3 DRAW
-		************************/
+			var xAxis = d3.svg.axis()
+	    		.scale(x1)
+	    		.orient("bottom");
 
-		var svg = d3.select("body").append("svg")
-			.attr("width", width)
-			.attr("height", height);
+			var yAxis = d3.svg.axis()
+			    .scale(y1)
+			    .orient("left");
 
-		var g = svg.selectAll("g")
-			.data(layers0)
-		  .enter().append("g");
+			var line = d3.svg.line()
+			    .x(function(d) {
+			    	return x1(d.x);
+			    })
+			    .y(function(d) {
+			    	return y1(d.y);
+			    });
 
-		var path = g.append("path");
+			var svg = d3.select("body").append("svg")
+				.attr("width", width)
+				.attr("height", height);
 
-		drawPaths();
+			var g, path, select, options;
 
-		function drawBars(index) {
-			svg.selectAll("path").attr('style', 'opacity: 0');
+			draw();
 
-			var barsData = $.map(layers0, function(d) {
-				return d.data[0].y;
-			});
+			function expand(n) {
+		  		var a = [], i;
+		  		for (i = 0; i < n; ++i) a[i] = 0;
+		  		var data = a.map(function(d, i) { return {x: i, y: 600}; });
+		  		return {
+		  			data: data
+		  		};
+			}
 
-			var barHeight = 20;
+			/************************
+			* D3 DRAW
+			************************/
+			function redraw(artist) {
+				var filteredData = _.filter(data[artist], function(d) {
+					return d.data.length == 91;
+				});
 
-			var xBar = d3.scale.linear()
-			    .domain([0, d3.max(barsData)])
-			    .range([0, width]);
+				var currentArtist = _.sortByOrder(filteredData, function(d) {
+					return d3.max(d.data, function(e) {
+						return e.y;
+					});
+				}, 'asc');
 
-			var bar = svg.selectAll("g")
-			    .data(barsData);
+				layers0 = stack(currentArtist);
 
-			bar.append("rect")
-				.transition()
-					.duration(1000)
-				.attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; })
-			    .attr("width", xBar)
-			    .attr("height", barHeight - 1);
-		}
-
-		function drawText(index) {
-			var metadata = layers0[index].metadata;
-
-			$(".artistName").text(metadata.artist);
-			$("#genre").text(metadata.genre);
-
-			$(".metadata").show('slow');
-		}
-
-		function drawPaths() {
-			$('.metadata').hide();
-			svg.selectAll("path").attr('style', 'opacity: 1');
-
-			path.attr("d", function(d) {
-					return area(d.data);
-				})
-				.on("click", function(object, id) {
-					highlightLayer(this, id);
-				})
-				.style("fill", function(d, i) {
-					return color(i);
-				})
-				.style('opacity', 1)
-				.on("mouseover", function(object, id) {
-					d3.select(this)
-						.transition()
-							.duration(500)
-						.style('fill', function() { return '#240B3B'; });
-				})
-				.on("mouseout", function(obj, id) {
-					d3.select(this)
-						.transition()
-							.duration(500)
-						.style('fill', function(d, i) {
-							return color(id);
+				y = d3.scale.linear()
+					.domain([0, d3.max(layers0, function(layer) {
+						return d3.max(layer.data, function(d) {
+							return d.y0 + d.y;
 						});
-				});
-		}
+					})]);
 
-		function reset() {
-			svg.select(".graphContainer").remove();
-			svg.select(".exit").remove();
+				area.x(function(d) { return x(d.x); })
+					.y0(function(d) { return y(d.y0); })
+					.y1(function(d) { return y(d.y0 + d.y); });
 
-			path.data(layers0);
-
-			path.transition()
-					.duration(1500)
-				.attr("d", function(d) { return area(d.data) })
-				.each("end", drawPaths);
-		}
-
-		function drawLineGraph(index) {
-			svg.append('path')
-				.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
-				.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
-				.on('click', reset)
-				.attr('class', 'exit')
-				.style('fill', function(d, i) { return color(index); });
-
-			var graphContainer = svg.append("g")
-				.attr("transform", "translate(50,100)")
-				.attr("class", "graphContainer");
-
-			graphContainer.append("g")
-		      .attr("class", "x axis")
-		      .attr("transform", "translate(0," + height / 2 + ")")
-		      .call(xAxis);
-
-			graphContainer.append("g")
-			    .attr("class", "y axis")
-			    .call(yAxis)
-				.append("text")
-	      			.attr("transform", "rotate(-90)")
-	      			.attr("y", 6)
-	      			.attr("dy", ".71em")
-	      			.style("text-anchor", "end")
-	      			.text("Spins");
-
-		    var graphLine = graphContainer.append("path")
-	      		.datum(layers0[index])
-	      		.attr("class", "line")
-	      		.attr("d", function(d) {
-	      			return line(d.data);
-	      		})
-	      		.style({
-	      			fill: 'none',
-	      			'stroke-width': '5px'
-	      		})
-	      		.style('stroke', function(d, i) { return color(index); });
-
-	      	var totalLength = graphLine.node().getTotalLength();
-
-	      	d3.select(graphLine.node())
-		    	.attr("stroke-dasharray", totalLength + " " + totalLength)
-		    	.attr("stroke-dashoffset", totalLength)
-		    	.transition()
-		    		.duration(5000)
-		        .ease("linear")
-		        .attr("stroke-dashoffset", 0);
-		}
-
-		function highlightLayer(object, index) {
-			d3.selectAll('path')
-				.on('mouseover', null)
-				.on('mouseout', null)
-				.on('click', null);
-
-			y1.domain([0, d3.max(layers0[index].data, function(layer) {
-					return layer.y;
-				})
-			]);
-
-			var selected = d3.select(object);
-			var parent = selected.node().parentNode;
-
-			d3.select(parent).moveToFront();
-
-			selected
-				.data(layers2)
-			.transition()
-				.duration(1500)
-			.attr("d", function(d) { return area(d.data); })
-			.style('opacity', .9)
-			.each('end', function() {
-				drawLineGraph(index);
-				drawText(index);
-			});
-		}
-
-		// Inspired by Lee Byron's test data generator.
-		function bumpLayer(n) {
-
-			function bump(a) {
-				var x = 1 / (.1 + Math.random()),
-					y = 2 * Math.random() - .5,
-					z = 10 / (.1 + Math.random());
-				for (var i = 0; i < n; i++) {
-				  var w = (i / n - y) * z;
-				  a[i] += x * Math.exp(-w * w);
-				}
+				g.remove();
+				draw();
 			}
 
-			var a = [], i;
-			for (i = 0; i < n; ++i) a[i] = 0;
-			for (i = 0; i < 5; ++i) bump(a);
-			var data = a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
-			return {
-				data: data,
-				metadata: {
-					artist: "James Brown",
-					genre: "Soul"
-				}
-			};
-		}
+			function draw() {
+				g = svg.selectAll("g")
+					.data(layers0)
+				  .enter().append("g");
 
-		function expand(n) {
-	  		var a = [], i;
-	  		for (i = 0; i < n; ++i) a[i] = 0;
-	  		var data = a.map(function(d, i) { return {x: i, y: 600}; });
-	  		return {
-	  			data: data
-	  		};
-		}
+				path = g.append("path");
 
-		/************************
-		* D3 Handle Toggle
-		************************/
-
-		var checkbox = d3.select('input[type="checkbox"]');
-		checkbox.on('change', function() {
-			var isChecked = this.checked;
-			if (isChecked === true) {
-				drawBars();
-			}
-			else {
 				drawPaths();
-			}
-		});
 
-		/************************
-		* ESCAPE KEY
-		************************/
+				select = d3.select(".content").append("select")
+					.on("change", changeArtist)
+					.attr('transform', 'translate(' + (width / 2) + ',0)')
+					.attr('class', 'artistSelect');
 
-		$(document).keyup(function(e) {
-			if (e.keyCode == 27) {
-				reset();
+			    options = select.selectAll('option')
+			    		.data(artists);
+
+				options.enter()
+					.append("option")
+					.attr("value", function(d) { return d; })
+					.text(function(d) { return d; });
+
+				/************************
+				* D3 Handle Toggle
+				************************/
+
+				var checkbox = d3.select('input[type="checkbox"]');
+				checkbox.on('change', function() {
+					var isChecked = this.checked;
+					if (isChecked === true) {
+						drawBars();
+					}
+					else {
+						drawPaths();
+					}
+				});
+
+				/************************
+				* ESCAPE KEY
+				************************/
+
+				$(document).keyup(function(e) {
+					if (e.keyCode == 27) {
+						reset();
+					}
+				});
 			}
-		});
+
+			function changeArtist() {
+				var si   = select.property('selectedIndex'),
+			        s = options.filter(function (d, i) { return i === si }),
+			        datum = s.datum();
+
+			    redraw(datum);
+			}
+
+			function drawBars(index) {
+				svg.selectAll("path").attr('style', 'opacity: 0');
+
+				var barsData = $.map(layers0, function(d) {
+					return d.data[0].y;
+				});
+				var barHeight = 20;
+
+				var xBar = d3.scale.linear()
+				    .domain([0, d3.max(barsData)])
+				    .range([0, width]);
+
+				var bar = svg.selectAll("g")
+				    .data(barsData);
+
+				bar.append("rect")
+					.transition()
+						.duration(1000)
+					.attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; })
+				    .attr("width", xBar)
+				    .attr("height", barHeight - 1);
+			}
+
+			function drawText(index) {
+				var metadata = layers0[index].metadata;
+
+				$(".artistName").text(layers0[index]['track_name']);
+				//$("#genre").text(metadata.genre);
+
+				$(".metadata").show('slow');
+			}
+
+			function drawPaths() {
+				$('.metadata').hide();
+				$('.artistSelect').show();
+
+				svg.selectAll("path").attr('style', 'opacity: 1');
+
+				path.transition().attr("d", function(d) {
+						return area(d.data);
+					})
+
+				path.on("click", function(object, id) {
+						highlightLayer(this, id);
+					})
+					.style("fill", function(d, i) {
+						return color(i);
+					})
+					.style('opacity', 1)
+					.on("mouseover", function(object, id) {
+						d3.select(this)
+							.transition()
+								.duration(500)
+							.style('fill', function() { return '#240B3B'; });
+					})
+					.on("mouseout", function(obj, id) {
+						d3.select(this)
+							.transition()
+								.duration(500)
+							.style('fill', function(d, i) {
+								return color(id);
+							});
+					});
+			}
+
+			function reset() {
+				svg.select(".graphContainer").remove();
+				svg.select(".exit").remove();
+				$('.metadata').hide();
+
+				path.data(layers0);
+
+				path.transition()
+						.duration(1500)
+					.attr("d", function(d) { return area(d.data) })
+					.each("end", drawPaths);
+			}
+
+			function drawLineGraph(index) {
+				svg.append('path')
+					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
+					.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
+					.on('click', reset)
+					.attr('class', 'exit')
+					.style('fill', function(d, i) { return color(index); });
+
+				var graphContainer = svg.append("g")
+					.attr("transform", "translate(50,100)")
+					.attr("class", "graphContainer");
+
+				graphContainer.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + height / 2 + ")")
+			      .call(xAxis);
+
+				graphContainer.append("g")
+				    .attr("class", "y axis")
+				    .call(yAxis)
+					.append("text")
+		      			.attr("transform", "rotate(-90)")
+		      			.attr("y", 6)
+		      			.attr("dy", ".71em")
+		      			.style("text-anchor", "end")
+		      			.text("Spins");
+
+			    var graphLine = graphContainer.append("path")
+		      		.datum(layers0[index])
+		      		.attr("class", "line")
+		      		.attr("d", function(d) {
+		      			return line(d.data);
+		      		})
+		      		.style({
+		      			fill: 'none',
+		      			'stroke-width': '5px'
+		      		})
+		      		.style('stroke', function(d, i) { return color(index); });
+
+		      	var totalLength = graphLine.node().getTotalLength();
+
+		      	d3.select(graphLine.node())
+			    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+			    	.attr("stroke-dashoffset", totalLength)
+			    	.transition()
+			    		.duration(5000)
+			        .ease("linear")
+			        .attr("stroke-dashoffset", 0);
+			}
+
+			function highlightLayer(object, index) {
+				$('.artistSelect').hide();
+
+				d3.selectAll('path')
+					.on('mouseover', null)
+					.on('mouseout', null)
+					.on('click', null);
+
+				y1.domain([0, d3.max(layers0[index].data, function(layer) {
+						return layer.y;
+					})
+				]);
+
+				var selected = d3.select(object);
+				var parent = selected.node().parentNode;
+
+				d3.select(parent).moveToFront();
+
+				selected
+					.data(layers2)
+				.transition()
+					.duration(1500)
+				.attr("d", function(d) { return area(d.data); })
+				.style('opacity', .9)
+				.each('end', function() {
+					drawLineGraph(index);
+					drawText(index);
+				});
+			}
+		}
 
 		</script>
 	</body>
