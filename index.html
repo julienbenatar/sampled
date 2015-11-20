@@ -10,6 +10,7 @@
 				font-family: 'Open Sans', sans-serif;
 				margin: 0;
 				width: 100%;
+				background-color: #A5DF00;
 			}
 			.content {
 				width: 100%;
@@ -20,10 +21,6 @@
 			  stroke: #000;
 			  shape-rendering: crispEdges;
 			}
-
-			.x.axis path {
-			  display: none;
-			}
 		</style>
 	</head>
 	<body>
@@ -33,12 +30,12 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
 		<script>
 		d3.selection.prototype.moveToFront = function() {
-		  return this.each(function(){
-		  this.parentNode.appendChild(this);
-		  });
+			return this.each(function(){
+				this.parentNode.appendChild(this);
+		  	});
 		};
 
-		var n = 100, // number of layers
+		var n = 20, // number of layers
 			m = 30, // number of samples per layer
 			stack = d3.layout.stack().offset("wiggle"),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
@@ -55,8 +52,7 @@
 			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
 			.range([height, 0]);
 
-		var color = d3.scale.linear()
-			.range(["#aad", "#556"]);
+		var color = d3.scale.category20b();
 
 		var x1 = d3.scale.linear()
 			.domain([0, m - 1])
@@ -86,26 +82,13 @@
 			.attr("width", width)
 			.attr("height", height);
 
-		svg.selectAll("path")
+		var g = svg.selectAll("g")
 			.data(layers0)
-		  .enter().append("path")
-			.attr("d", area)
-			.on("mouseover", function(object, id) {
-				d3.select(this)
-					.transition()
-						.duration(500)
-					.style('fill', function() { return '#ccc'; });
-			})
-			.on("mouseout", function(obj, id) {
-				d3.select(this)
-					.transition()
-							.duration(500)
-					.style('fill', function() { return color(Math.random()); });
-			})
-			.on("click", function(object, id) {
-				highlightLayer(this, id);
-			})
-			.style("fill", function() { return color(Math.random()); });
+		  .enter().append("g");
+
+		var path = g.append("path");
+
+		drawPaths();
 
 		$(document).keyup(function(e) {
 			if (e.keyCode == 27) {
@@ -113,109 +96,137 @@
 			}
 		});
 
+		function drawBars() {
+
+		}
+
+		function drawPaths() {
+			path.attr("d", area)
+				.on("click", function(object, id) {
+					highlightLayer(this, id);
+				})
+				.style("fill", function(d, i) {
+					return color(i);
+				})
+				.style('opacity', 1)
+				.on("mouseover", function(object, id) {
+					d3.select(this)
+						.transition()
+							.duration(500)
+						.style('fill', function() { return '#240B3B'; });
+				})
+				.on("mouseout", function(obj, id) {
+					d3.select(this)
+						.transition()
+							.duration(500)
+						.style('fill', function(d, i) {
+							return color(id);
+						});
+				});
+		}
+
 		function reset() {
 			svg.select(".graphContainer").remove();
+			svg.select(".exit").remove();
 
-			var path = svg.selectAll("path")
-				.data(layers0);
+			path.data(layers0);
 
 			path.transition()
-					.duration(2000)
+					.duration(1500)
 				.attr("d", area)
-				.each("end", function() {
-					path.on("mouseout", function(obj, id) {
-						d3.select(this)
-							.transition()
-								.duration(500)
-							.style('fill', function() { return color(Math.random()); });
-					})
-					.on("mouseover", function(object, id) {
-						d3.select(this)
-							.transition()
-								.duration(500)
-							.style('fill', function() { return '#ccc'; });
-					});
-				});
+				.each("end", drawPaths);
 		}
 
 		function highlightLayer(object, index) {
 			d3.selectAll('path')
 				.on('mouseover', null)
-				.on('mouseout', null);
+				.on('mouseout', null)
+				.on('click', null);
 
 			y1.domain([0, d3.max(layers0[index], function(layer) { return layer.y; })]);
 
-			d3.select(object)
-					.moveToFront()
-					.data(layers2)
-				.transition()
-					.duration(1500)
-				.attr("d", area)
-				.each('end', function() {
-					var graphContainer = svg.append("g")
-						.attr("transform", "translate(50,50)")
-						.attr("class", "graphContainer");
+			var selected = d3.select(object);
+			var parent = selected.node().parentNode;
 
-					graphContainer.append("g")
-				      .attr("class", "x axis")
-				      .attr("transform", "translate(0," + height / 2 + ")")
-				      .call(xAxis);
+			d3.select(parent).moveToFront();
 
-					graphContainer.append("g")
-					    .attr("class", "y axis")
-					    .call(yAxis)
-						.append("text")
-			      			.attr("transform", "rotate(-90)")
-			      			.attr("y", 6)
-			      			.attr("dy", ".71em")
-			      			.style("text-anchor", "end")
-			      			.text("Value");
+			selected
+				.data(layers2)
+			.transition()
+				.duration(1500)
+			.attr("d", area)
+			.style('opacity', .9)
+			.each('end', function() {
+				svg.append('path')
+					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
+					.attr('transform', 'translate(' + (width - 25) + ',25) rotate(45)')
+					.on('click', reset)
+					.attr('class', 'exit');
 
-				    var graphLine = graphContainer.append("path")
-			      		.datum(layers0[index])
-			      		.attr("class", "line")
-			      		.attr("d", line)
-			      		.style({
-			      			fill: 'none',
-			      			stroke: 'steelblue',
-			      			'stroke-width': '3px'
-			      		});
+				var graphContainer = svg.append("g")
+					.attr("transform", "translate(50,50)")
+					.attr("class", "graphContainer");
 
-			      	var totalLength = graphLine[0][0].getTotalLength();
+				graphContainer.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + height / 2 + ")")
+			      .call(xAxis);
 
-			      	d3.select(graphLine[0][0])
-				    	.attr("stroke-dasharray", totalLength + " " + totalLength)
-				    	.attr("stroke-dashoffset", totalLength)
-				    	.transition()
-				    		.duration(5000)
-				        .ease("linear")
-				        .attr("stroke-dashoffset", 0);
-				});
+				graphContainer.append("g")
+				    .attr("class", "y axis")
+				    .call(yAxis)
+					.append("text")
+		      			.attr("transform", "rotate(-90)")
+		      			.attr("y", 6)
+		      			.attr("dy", ".71em")
+		      			.style("text-anchor", "end")
+		      			.text("Value");
+
+			    var graphLine = graphContainer.append("path")
+		      		.datum(layers0[index])
+		      		.attr("class", "line")
+		      		.attr("d", line)
+		      		.style({
+		      			fill: 'none',
+		      			stroke: '#0080FF',
+		      			'stroke-width': '5px'
+		      		});
+
+		      	var totalLength = graphLine[0][0].getTotalLength();
+
+		      	d3.select(graphLine[0][0])
+			    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+			    	.attr("stroke-dashoffset", totalLength)
+			    	.transition()
+			    		.duration(5000)
+			        .ease("linear")
+			        .attr("stroke-dashoffset", 0);
+			});
 		}
 
 		// Inspired by Lee Byron's test data generator.
 		function bumpLayer(n) {
 
-		  function bump(a) {
-			var x = 1 / (.1 + Math.random()),
-				y = 2 * Math.random() - .5,
-				z = 10 / (.1 + Math.random());
-			for (var i = 0; i < n; i++) {
-			  var w = (i / n - y) * z;
-			  a[i] += x * Math.exp(-w * w);
+			function bump(a) {
+				var x = 1 / (.1 + Math.random()),
+					y = 2 * Math.random() - .5,
+					z = 10 / (.1 + Math.random());
+				for (var i = 0; i < n; i++) {
+				  var w = (i / n - y) * z;
+				  a[i] += x * Math.exp(-w * w);
+				}
 			}
-		  }
 
-		  var a = [], i;
-		  for (i = 0; i < n; ++i) a[i] = 0;
-		  for (i = 0; i < 5; ++i) bump(a);
-		  return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
+			var a = [], i;
+			for (i = 0; i < n; ++i) a[i] = 0;
+			for (i = 0; i < 5; ++i) bump(a);
+			return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
 		}
 
 		function expand(n) {
-		  var a = [], i;
-		  for (i = 0; i < n; ++i) a[i] = 0;
-		  return a.map(function(d, i) { return {x: i, y: 600}; });
+	  		var a = [], i;
+	  		for (i = 0; i < n; ++i) a[i] = 0;
+	  		return a.map(function(d, i) { return {x: i, y: 600}; });
 		}
 
 		</script>
