@@ -42,9 +42,15 @@
 
 		var n = 20, // number of layers
 			m = 90, // number of samples per layer
-			stack = d3.layout.stack().offset("wiggle"),
+			stack = d3.layout.stack()
+				.offset("wiggle")
+				.values(function(d) {
+					return d.data;
+				}),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
 			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
+
+		console.log(layers0);
 
 		var width = window.innerWidth,
 			height = window.innerHeight;
@@ -54,7 +60,11 @@
 			.range([0, width]);
 
 		var y = d3.scale.linear()
-			.domain([0, d3.max(layers0, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
+			.domain([0, d3.max(layers0, function(layer) {
+				return d3.max(layer.data, function(d) {
+					return d.y0 + d.y;
+				});
+			})])
 			.range([height, 0]);
 
 		var color = d3.scale.category20b();
@@ -80,8 +90,12 @@
 		    .orient("left");
 
 		var line = d3.svg.line()
-		    .x(function(d) { return x1(d.x); })
-		    .y(function(d) { return y1(d.y); });
+		    .x(function(d) {
+		    	return x1(d.x);
+		    })
+		    .y(function(d) {
+		    	return y1(d.y);
+		    });
 
 		var svg = d3.select("body").append("svg")
 			.attr("width", width)
@@ -106,7 +120,9 @@
 		}
 
 		function drawPaths() {
-			path.attr("d", area)
+			path.attr("d", function(d) {
+					return area(d.data);
+				})
 				.on("click", function(object, id) {
 					highlightLayer(this, id);
 				})
@@ -138,7 +154,7 @@
 
 			path.transition()
 					.duration(1500)
-				.attr("d", area)
+				.attr("d", function(d) { return area(d.data) })
 				.each("end", drawPaths);
 		}
 
@@ -148,7 +164,10 @@
 				.on('mouseout', null)
 				.on('click', null);
 
-			y1.domain([0, d3.max(layers0[index], function(layer) { return layer.y; })]);
+			y1.domain([0, d3.max(layers0[index].data, function(layer) {
+					return layer.y;
+				})
+			]);
 
 			var selected = d3.select(object);
 			var parent = selected.node().parentNode;
@@ -159,7 +178,7 @@
 				.data(layers2)
 			.transition()
 				.duration(1500)
-			.attr("d", area)
+			.attr("d", function(d) { return area(d.data); })
 			.style('opacity', .9)
 			.each('end', function() {
 				svg.append('path')
@@ -186,12 +205,14 @@
 		      			.attr("y", 6)
 		      			.attr("dy", ".71em")
 		      			.style("text-anchor", "end")
-		      			.text("Value");
+		      			.text("Spins");
 
 			    var graphLine = graphContainer.append("path")
 		      		.datum(layers0[index])
 		      		.attr("class", "line")
-		      		.attr("d", line)
+		      		.attr("d", function(d) {
+		      			return line(d.data);
+		      		})
 		      		.style({
 		      			fill: 'none',
 		      			'stroke-width': '5px'
@@ -226,13 +247,23 @@
 			var a = [], i;
 			for (i = 0; i < n; ++i) a[i] = 0;
 			for (i = 0; i < 5; ++i) bump(a);
-			return a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
+			var data = a.map(function(d, i) { return {x: i, y: Math.max(0, d)}; });
+			return {
+				data: data,
+				metadata: {
+					artist: "James Brown",
+					genre: "Soul"
+				}
+			};
 		}
 
 		function expand(n) {
 	  		var a = [], i;
 	  		for (i = 0; i < n; ++i) a[i] = 0;
-	  		return a.map(function(d, i) { return {x: i, y: 600}; });
+	  		var data = a.map(function(d, i) { return {x: i, y: 600}; });
+	  		return {
+	  			data: data
+	  		};
 		}
 
 		</script>
