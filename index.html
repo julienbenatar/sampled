@@ -85,6 +85,24 @@
 				left: 50%;
 				background-color: #CCC;
 			}
+
+			.metadata {
+				color: #ccc;
+				position: absolute;
+				right: 0;
+				top: 50px;
+				padding: 20px;
+				font-size: 18px;
+			}
+
+			.artistName {
+				font-size: 40px;
+				font-weight: bold;
+			}
+
+			.bold {
+				font-weight: bold;
+			}
 		</style>
 	</head>
 	<body>
@@ -93,9 +111,17 @@
 				<input class='toggleButton' id='cb1' type='checkbox'>
 		    	<label class='toggleButton' for='cb1'></label>
 		    </div>
+
+		    <div class="metadata">
+		    	<div class="artistName"></div>
+		    	<div class="genre">
+		    		<span class="bold">Genre: </span><span id="genre"></span>
+		    	</div>
+		    </div>
 		</div>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.9/d3.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.10.1/lodash.min.js"></script>
 		<script>
 
 
@@ -118,8 +144,6 @@
 				}),
 			layers0 = stack(d3.range(n).map(function() { return bumpLayer(m); })),
 			layers2 = stack(d3.range(1).map(function() { return expand(m); }));
-
-		console.log(layers0);
 
 		var width = window.innerWidth,
 			height = window.innerHeight;
@@ -187,7 +211,18 @@
 			svg.selectAll("path").remove();
 		}
 
+		function drawText(index) {
+			var metadata = layers0[index].metadata;
+
+			$(".artistName").text(metadata.artist);
+			$("#genre").text(metadata.genre);
+
+			$(".metadata").show('slow');
+		}
+
 		function drawPaths() {
+			$('.metadata').hide();
+
 			path.attr("d", function(d) {
 					return area(d.data);
 				})
@@ -226,6 +261,56 @@
 				.each("end", drawPaths);
 		}
 
+		function drawLineGraph(index) {
+			svg.append('path')
+				.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
+				.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
+				.on('click', reset)
+				.attr('class', 'exit')
+				.style('fill', function(d, i) { return color(index); });
+
+			var graphContainer = svg.append("g")
+				.attr("transform", "translate(50,100)")
+				.attr("class", "graphContainer");
+
+			graphContainer.append("g")
+		      .attr("class", "x axis")
+		      .attr("transform", "translate(0," + height / 2 + ")")
+		      .call(xAxis);
+
+			graphContainer.append("g")
+			    .attr("class", "y axis")
+			    .call(yAxis)
+				.append("text")
+	      			.attr("transform", "rotate(-90)")
+	      			.attr("y", 6)
+	      			.attr("dy", ".71em")
+	      			.style("text-anchor", "end")
+	      			.text("Spins");
+
+		    var graphLine = graphContainer.append("path")
+	      		.datum(layers0[index])
+	      		.attr("class", "line")
+	      		.attr("d", function(d) {
+	      			return line(d.data);
+	      		})
+	      		.style({
+	      			fill: 'none',
+	      			'stroke-width': '5px'
+	      		})
+	      		.style('stroke', function(d, i) { return color(index); });
+
+	      	var totalLength = graphLine.node().getTotalLength();
+
+	      	d3.select(graphLine.node())
+		    	.attr("stroke-dasharray", totalLength + " " + totalLength)
+		    	.attr("stroke-dashoffset", totalLength)
+		    	.transition()
+		    		.duration(5000)
+		        .ease("linear")
+		        .attr("stroke-dashoffset", 0);
+		}
+
 		function highlightLayer(object, index) {
 			d3.selectAll('path')
 				.on('mouseover', null)
@@ -249,53 +334,8 @@
 			.attr("d", function(d) { return area(d.data); })
 			.style('opacity', .9)
 			.each('end', function() {
-				svg.append('path')
-					.attr('d', d3.svg.symbol().type('cross').size(25 * 25))
-					.attr('transform', 'translate(' + (width - 50) + ',30) rotate(45)')
-					.on('click', reset)
-					.attr('class', 'exit')
-					.style('fill', function(d, i) { return color(index); });
-
-				var graphContainer = svg.append("g")
-					.attr("transform", "translate(50,50)")
-					.attr("class", "graphContainer");
-
-				graphContainer.append("g")
-			      .attr("class", "x axis")
-			      .attr("transform", "translate(0," + height / 2 + ")")
-			      .call(xAxis);
-
-				graphContainer.append("g")
-				    .attr("class", "y axis")
-				    .call(yAxis)
-					.append("text")
-		      			.attr("transform", "rotate(-90)")
-		      			.attr("y", 6)
-		      			.attr("dy", ".71em")
-		      			.style("text-anchor", "end")
-		      			.text("Spins");
-
-			    var graphLine = graphContainer.append("path")
-		      		.datum(layers0[index])
-		      		.attr("class", "line")
-		      		.attr("d", function(d) {
-		      			return line(d.data);
-		      		})
-		      		.style({
-		      			fill: 'none',
-		      			'stroke-width': '5px'
-		      		})
-		      		.style('stroke', function(d, i) { return color(index); });
-
-		      	var totalLength = graphLine[0][0].getTotalLength();
-
-		      	d3.select(graphLine[0][0])
-			    	.attr("stroke-dasharray", totalLength + " " + totalLength)
-			    	.attr("stroke-dashoffset", totalLength)
-			    	.transition()
-			    		.duration(5000)
-			        .ease("linear")
-			        .attr("stroke-dashoffset", 0);
+				drawLineGraph(index);
+				drawText(index);
 			});
 		}
 
