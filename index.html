@@ -13,6 +13,8 @@
 				background-color: #A5DF00;
 			}
 			.content {
+				display: block;
+				position: relative;
 				width: 100%;
 			}
 			.axis path,
@@ -21,10 +23,74 @@
 			  stroke: #000;
 			  shape-rendering: crispEdges;
 			}
+
+			.buttonContainer {
+				display: block;
+				position: absolute;
+				top: 25px;
+				left: 25px;
+			}
+
+			input.toggleButton {
+				-webkit-box-sizing: border-box;
+			    -moz-box-sizing: border-box;
+			    box-sizing: border-box;
+			    padding: 0;
+			    display: none;
+			}
+
+			label.toggleButton {
+				background: #F0F0F0;
+				border-radius: 25px;
+				padding: 4px;
+				-webkit-transition: all .4s ease;
+				transition: all .4s ease;
+				outline: 0;
+				display: block;
+				width: 60px;
+				height: 30px;
+				position: relative;
+				cursor: pointer;
+				-webkit-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+			}
+
+			label.toggleButton:after {
+				border-radius: 50%;
+				background: #fff;
+				-webkit-transition: all .2s ease;
+				transition: all .2s ease;
+				left: 0;
+			}
+
+			label.toggleButton:after,
+			label.toggleButton:before {
+				position: relative;
+				display: block;
+				content: "";
+				width: 50%;
+				height: 100%;
+			}
+
+			label.toggleButton:before {
+				display: none;
+			}
+
+			input.toggleButton:checked + label.toggleButton:after {
+				left: 50%;
+				background-color: #CCC;
+			}
+
 		</style>
 	</head>
 	<body>
 		<div class="content">
+			<div class="buttonContainer">
+				<input class='toggleButton' id='cb1' type='checkbox'>
+		    	<label class='toggleButton' for='cb1'></label>
+		    </div>
 		</div>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.9/d3.js"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js"></script>
@@ -100,6 +166,10 @@
 		var path = g.append("path");
 
 		drawPaths();
+
+		function drawBars() {
+			svg.selectAll("path").remove();
+		}
 
 		function drawPaths() {
 			path.attr("d", area)
