@@ -107,10 +107,33 @@
 			.bold {
 				font-weight: bold;
 			}
+
+			.intro {
+				text-align: center;
+			}
+
+			.header {
+				font-size: 40px;
+				font-weight: bold;
+			}
 		</style>
 	</head>
 	<body>
 		<div class="content">
+			<div class="intro">
+				<div class="header">Who is a better influence, Kanye or Jay-Z?</div>
+
+				<div>Maybe you were always a fan of Etta James.</div>
+
+				<div>Maybe you love electronic and first fell in love with her thanks to the earworm hook from “Something’s Got a Hold on Me” that Pretty Lights sampled in the 2006 track “Finally Moving”?</div>
+
+				<div>Or maybe you’re more of a hip hop fan and didn’t hear that hook until Flo Rida used it five years later for “Good Feeling”?</div>
+
+				<div>Or maybe you still have no idea what I’m on about. </div>
+
+				<div>But one thing is for sure - The art of sampling, remixing, and covering - essentially relying on original recordings from yonder to enhance your music has become standard procedure. Which raises the question - what is the impact for the original artists that are sampled? Do they see an increase or resurgence in popularity, and how can we measure that? </div>
+
+			</div>
 			<div class="buttonContainer">
 				<input class='toggleButton' id='cb1' type='checkbox'>
 		    	<label class='toggleButton' for='cb1'></label>
@@ -211,8 +234,28 @@
 
 		drawPaths();
 
-		function drawBars() {
+		function drawBars(index) {
 			svg.selectAll("path").attr('style', 'opacity: 0');
+
+			var barsData = $.map(layers0, function(d) {
+				return d.data[0].y;
+			});
+
+			var barHeight = 20;
+
+			var xBar = d3.scale.linear()
+			    .domain([0, d3.max(barsData)])
+			    .range([0, width]);
+
+			var bar = svg.selectAll("g")
+			    .data(barsData);
+
+			bar.append("rect")
+				.transition()
+					.duration(1000)
+				.attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; })
+			    .attr("width", xBar)
+			    .attr("height", barHeight - 1);
 		}
 
 		function drawText(index) {
